@@ -9,6 +9,7 @@ tf.get_logger().setLevel(logging.ERROR)
 import layers
 import preprocess
 import numpy as np
+import penut.io as pio
 
 class BiDAF:
     def __init__(
@@ -91,7 +92,7 @@ class BiDAF:
 
         inn = [cinn, qinn]
 
-        self.model = tf.keras.models.Model(inn, out)
+        self.model = tf.keras.models.Model(inn, out, name='BiDAF')
         self.model.summary(line_length=128)
 
         optimizer = tf.keras.optimizers.Adadelta(lr=1e-2)
@@ -146,28 +147,61 @@ def accuracy(y_true, y_pred):
     return tf.math.reduce_mean(acc, axis=0)
 
 if __name__ == '__main__':
-    ds = preprocess.Preprocessor([
-        './data/drcd/DRCD_training.json',
-        './data/drcd/DRCD_dev.json',
-        './data/drcd/DRCD_training.json'
-    ])
+    # TODO: Finish config.json
+    save_dir = './save'
+    os.makedirs(save_dir, exist_ok=True)
+    fp = lambda fn: os.path.join(save_dir, fn)
+    # ds = preprocess.Preprocessor([
+    #     './data/drcd/DRCD_training.json',
+    #     './data/drcd/DRCD_dev.json',
+    #     './data/drcd/DRCD_test.json'
+    # ])
 
-    train_c, train_q, train_y = ds.get_dataset('./data/drcd/DRCD_training.json')
-    test_c, test_q, test_y = ds.get_dataset('./data/drcd/DRCD_dev.json')
+    # max_features = len(ds.charset)
+    # print(f'Total Characters: {max_features}')
 
-    print(train_c.shape, train_q.shape, train_y.shape)
-    print(test_c.shape, test_q.shape, test_y.shape)
+    # train_c, train_q, train_y = ds.get_dataset('./data/drcd/DRCD_training.json')
+    # test_c, test_q, test_y = ds.get_dataset('./data/drcd/DRCD_dev.json')
 
+    # print(f'Train Shape: {train_c.shape}, {train_q.shape}, {train_y.shape}')
+    # print(f'Dev Shape: {test_c.shape}, {test_q.shape}, {test_y.shape}')
+
+    # bidaf = BiDAF(
+    #     clen=ds.max_clen,
+    #     qlen=ds.max_qlen,
+    #     emb_size=300,
+    #     max_features=max_features
+    # )
     bidaf = BiDAF(
-        clen=ds.max_clen,
-        qlen=ds.max_qlen,
-        emb_size=128,
-        max_features=len(ds.charset)
+        clen=10,
+        qlen=5,
+        emb_size=2,
+        max_features=20
     )
+    train_c = np.random.randint(0, 19, (10, 10))
+    train_q = np.random.randint(0, 19, (10, 5))
+    train_y = np.random.randint(0, 9, (10, 2))
+    test_c = np.random.randint(0, 19, (10, 10))
+    test_q = np.random.randint(0, 19, (10, 5))
+    test_y = np.random.randint(0, 9, (10, 2))
+
+    ds_npy = {
+        'train_c': train_c,
+        'train_q': train_q,
+        'train_y': train_y,
+        'test_c': test_c,
+        'test_q': test_q,
+        'test_y': test_y
+    }
+
+    np.save(fp('ds.npy'), ds_npy)
+
     bidaf.build_model()
     bidaf.model.fit(
         [train_c, train_q], train_y,
-        batch_size=16,
-        epochs=100,
+        batch_size=8,
+        epochs=1,
         validation_data=([test_c, test_q], test_y)
     )
+
+    bidaf.model.save_weights(fp('model'))

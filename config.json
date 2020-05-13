@@ -1,0 +1,8 @@
+{
+    "save_dir": "./save",
+    "dataset_path": [
+        "./data/drcd/DRCD_training.json",
+        "./data/drcd/DRCD_dev.json",
+        "./data/drcd/DRCD_test.json"
+    ]
+}
